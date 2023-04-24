@@ -5,16 +5,27 @@ import (
 	"github.com/angelmotta/cli-naive-replication/client"
 	"github.com/angelmotta/cli-naive-replication/internal/exchangestore"
 	"log"
-	"time"
+	"sync"
 )
 
 func main() {
 	//initialTestApproach();
+	log.Println("*** Client test replication started ***")
 	c1 := client.New("localhost:6380", "localhost:6381")
 	c2 := client.New("localhost:6380", "localhost:6381")
-	go c1.TestInsertions(3.710)
-	go c2.TestInsertions(3.810)
-	time.Sleep(time.Second * 5)
+
+	// Run concurrently both clients
+	wg := new(sync.WaitGroup)
+	wg.Add(1)
+	go c1.TestInsertions(3.710, wg)
+
+	wg.Add(1)
+	go c2.TestInsertions(3.810, wg)
+
+	// Wait until both clients are done
+	log.Println("waiting to finish both clients")
+	wg.Wait()
+	log.Println("*** Client test replication started ***")
 }
 
 func initialTestApproach() {

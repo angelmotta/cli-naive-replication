@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/angelmotta/cli-naive-replication/internal/exchangestore"
 	"log"
+	"sync"
 )
 
 type Client struct {
@@ -37,7 +38,9 @@ func New(svr1Addr, svr2Addr string) *Client {
 	return c
 }
 
-func (c *Client) TestInsertions(priceExchange float64) {
+func (c *Client) TestInsertions(priceExchange float64, wg *sync.WaitGroup) {
+	defer wg.Done() // Decrement the counter when goroutine complete
+
 	log.Println("TestInsertions execution started...")
 	for i := 0; i < 11; i++ {
 		valPrice := fmt.Sprintf("%f", priceExchange)

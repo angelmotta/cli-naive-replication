@@ -1,0 +1,14 @@
+version: "3.9"
+services:
+  redis1:
+    image: redis
+    command: --port 6380
+    ports:
+      - "6380:6380"
+    container_name: redis_svr1
+  redis2:
+    image: redis
+    command: --port 6381
+    ports:
+      - "6381:6381"
+    container_name: redis_svr2

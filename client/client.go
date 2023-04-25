@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/angelmotta/cli-naive-replication/internal/exchangestore"
 	"log"
+	"math/rand"
 	"sync"
 )
 
@@ -17,6 +18,7 @@ type Client struct {
 
 var ctx = context.Background()
 
+// New returns a new client
 func New(svr1Addr, svr2Addr string) *Client {
 	c := &Client{
 		Svr1Addr: svr1Addr,
@@ -38,12 +40,16 @@ func New(svr1Addr, svr2Addr string) *Client {
 	return c
 }
 
-func (c *Client) TestInsertions(priceExchange float64, wg *sync.WaitGroup) {
+func (c *Client) TestInsertions(priceExchange float64, wg *sync.WaitGroup, n int) {
 	defer wg.Done() // Decrement the counter when goroutine complete
 
 	log.Println("TestInsertions execution started...")
-	for i := 0; i < 11; i++ {
-		valPrice := fmt.Sprintf("%f", priceExchange)
+	min := 37100
+	max := 39100
+	for i := 0; i < n; i++ {
+		// Generate Random
+		valCurrency := float64(rand.Intn(max-min)+min) / 10000
+		valPrice := fmt.Sprintf("%f", valCurrency)
 		// Writes to Replica1
 		err := c.replica1.SetExchange("sol-dollar", valPrice)
 		if err != nil {

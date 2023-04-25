@@ -17,10 +17,10 @@ func main() {
 	// Run concurrently both clients
 	wg := new(sync.WaitGroup)
 	wg.Add(1)
-	go c1.TestInsertions(3.710, wg)
+	go c1.TestInsertions(3.710, wg, 20)
 
 	wg.Add(1)
-	go c2.TestInsertions(3.810, wg)
+	go c2.TestInsertions(3.810, wg, 20)
 
 	// Wait until both clients are done
 	log.Println("waiting to finish both clients")

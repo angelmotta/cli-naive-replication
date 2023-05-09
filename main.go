@@ -17,10 +17,10 @@ func main() {
 	// Run concurrently both clients
 	wg := new(sync.WaitGroup)
 	wg.Add(1)
-	go c1.TestInsertions(3.710, wg, 20)
+	go c1.TestInsertions(wg, 20)
 
 	wg.Add(1)
-	go c2.TestInsertions(3.810, wg, 20)
+	go c2.TestInsertions(wg, 20)
 
 	// Wait until both clients are done
 	log.Println("waiting to finish both clients")
@@ -28,6 +28,7 @@ func main() {
 	log.Println("*** Client test replication started ***")
 }
 
+// initialTestApproach was the initial old approach
 func initialTestApproach() {
 	log.Println("*** client naive replication started... ***")
 	r1, err := exchangestore.New("localhost:6381")

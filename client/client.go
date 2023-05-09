@@ -2,10 +2,10 @@ package client
 
 import (
 	"context"
-	"fmt"
 	"github.com/angelmotta/cli-naive-replication/internal/exchangestore"
 	"log"
 	"math/rand"
+	"strconv"
 	"sync"
 )
 
@@ -40,27 +40,38 @@ func New(svr1Addr, svr2Addr string) *Client {
 	return c
 }
 
-func (c *Client) TestInsertions(priceExchange float64, wg *sync.WaitGroup, n int) {
+func (c *Client) TestInsertions(wg *sync.WaitGroup, n int) {
 	defer wg.Done() // Decrement the counter when goroutine complete
 
 	log.Println("TestInsertions execution started...")
-	min := 37100
-	max := 39100
 	for i := 0; i < n; i++ {
-		// Generate Random
-		valCurrency := float64(rand.Intn(max-min)+min) / 10000
-		valPrice := fmt.Sprintf("%f", valCurrency)
+		valPrice := c.GetRandomCurrencyPrice()
 		// Writes to Replica1
-		err := c.replica1.SetExchange("sol-dollar", valPrice)
+		err := c.replica1.SetExchange("usd_pen_", valPrice)
 		if err != nil {
-			log.Panicf("got error Set value %v in ExchangeStore: %v", priceExchange, err)
+			log.Panicf("got error Set value opeartion #%v in ExchangeStore: %v", i, err)
 		}
 		// Writes to replica2
-		err = c.replica2.SetExchange("sol-dollar", valPrice)
+		err = c.replica2.SetExchange("usd_pen_", valPrice)
 		if err != nil {
-			log.Panicf("got error Set value %v in ExchangeStore: %v", priceExchange, err)
+			log.Panicf("got error Set value %v in ExchangeStore: %v", i, err)
 		}
-		priceExchange = priceExchange + 0.002
 	}
 	log.Println("TestInsertions execution done")
+}
+
+func (c *Client) GetRandomCurrencyPrice() string {
+	min := 3708
+	max := 3910
+	n := 8 // Length: 8 bytes
+	// Generate Random
+	valCurrency := float64(rand.Intn(max-min)+min) / 1000
+	log.Printf("float currency: %v", valCurrency)
+	//valPrice := fmt.Sprintf("%f", valCurrency)
+	valPrice := strconv.FormatFloat(valCurrency, 'f', 6, 64)
+	log.Printf("my string currency: %v", valPrice)
+	if len(valPrice) != n {
+		log.Panicf("got error creating random price value %v in ExchangeStore: this length is not %v bytes", valPrice, n)
+	}
+	return valPrice
 }

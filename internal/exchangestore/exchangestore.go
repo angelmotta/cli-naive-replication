@@ -38,6 +38,13 @@ func New(addr string) (*ExchangeStore, error) {
 // GetExchange retrieves a Currency Exchange value from the Store layer
 func (db *ExchangeStore) GetExchange(key string) (string, error) {
 	val, err := db.redis.Get(ctx, key).Result()
+	if err == redis.Nil {
+		log.Println("key does not exist")
+		return "", nil
+	} else if err != nil {
+		log.Println("got error Get value from Redis", err)
+		return "", err
+	}
 	return val, err
 }
 

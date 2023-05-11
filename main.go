@@ -11,16 +11,16 @@ import (
 func main() {
 	//initialTestApproach();
 	log.Println("*** Client test replication started ***")
-	c1 := client.New("localhost:6380", "localhost:6381")
-	c2 := client.New("localhost:6380", "localhost:6381")
+	c1 := client.New(0, "localhost:6380", "localhost:6381")
+	c2 := client.New(1, "localhost:6380", "localhost:6381")
 
 	// Run concurrently both clients
 	wg := new(sync.WaitGroup)
 	wg.Add(1)
-	go c1.TestInsertions(wg, 20)
+	go c1.CloseLoopClient(wg, 20)
 
 	wg.Add(1)
-	go c2.TestInsertions(wg, 20)
+	go c2.CloseLoopClient(wg, 20)
 
 	// Wait until both clients are done
 	log.Println("waiting to finish both clients")

@@ -12,3 +12,9 @@ services:
     ports:
       - "6381:6381"
     container_name: redis_svr2
+  redis3:
+    image: redis
+    command: --port 6382
+    ports:
+      - "6382:6382"
+    container_name: redis_svr3

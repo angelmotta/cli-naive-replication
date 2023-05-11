@@ -11,8 +11,10 @@ import (
 func main() {
 	//initialTestApproach();
 	log.Println("*** Client test replication started ***")
-	c1 := client.New(0, "localhost:6380", "localhost:6381")
-	c2 := client.New(1, "localhost:6380", "localhost:6381")
+	listRedis := []string{"localhost:6380", "localhost:6381"}
+
+	c1 := client.New(0, listRedis[0], listRedis[1])
+	c2 := client.New(1, listRedis[0], listRedis[1])
 
 	// Run concurrently both clients
 	wg := new(sync.WaitGroup)

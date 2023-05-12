@@ -1,7 +1,6 @@
 package client
 
 import (
-	"context"
 	"github.com/angelmotta/cli-naive-replication/internal/exchangestore"
 	"log"
 	"math/rand"
@@ -10,25 +9,34 @@ import (
 )
 
 type Client struct {
-	ClientId uint32
-	Svr1Addr string
-	Svr2Addr string
-	Svr3Addr string
-	replica1 *exchangestore.ExchangeStore
-	replica2 *exchangestore.ExchangeStore
-	replica3 *exchangestore.ExchangeStore
+	ClientId     uint32
+	Svr1Addr     string
+	Svr2Addr     string
+	Svr3Addr     string
+	servers      []string
+	replica1     *exchangestore.ExchangeStore
+	replica2     *exchangestore.ExchangeStore
+	replica3     *exchangestore.ExchangeStore
+	replicasConn []*exchangestore.ExchangeStore
 }
 
-var ctx = context.Background()
-
 // New returns a new client
-func New(idClient uint32, svr1Addr, svr2Addr, svr3Addr string) *Client {
+func New(idClient uint32, svr1Addr, svr2Addr, svr3Addr string, servers []string) *Client {
+	n := len(servers)
 	c := &Client{
-		ClientId: idClient,
-		Svr1Addr: svr1Addr,
-		Svr2Addr: svr2Addr,
-		Svr3Addr: svr3Addr,
+		ClientId:     idClient,
+		Svr1Addr:     svr1Addr,
+		Svr2Addr:     svr2Addr,
+		Svr3Addr:     svr3Addr,
+		servers:      make([]string, n),
+		replicasConn: make([]*exchangestore.ExchangeStore, n),
 	}
+	copy(c.servers, servers)
+	// Read servers in loop
+	for i := 0; i < n; i++ {
+		log.Printf("ClientId #%v, server %v: %v", c.ClientId, i, c.servers[i])
+	}
+
 	// Connect to ExchangeStore Replica 1
 	r1, err := exchangestore.New(svr1Addr)
 	if err != nil {

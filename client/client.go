@@ -9,53 +9,30 @@ import (
 )
 
 type Client struct {
-	ClientId     uint32
-	Svr1Addr     string
-	Svr2Addr     string
-	Svr3Addr     string
-	servers      []string
-	replica1     *exchangestore.ExchangeStore
-	replica2     *exchangestore.ExchangeStore
-	replica3     *exchangestore.ExchangeStore
-	replicasConn []*exchangestore.ExchangeStore
+	ClientId          uint32
+	servers           []string
+	exchangeStoreConn []*exchangestore.ExchangeStore
 }
 
 // New returns a new client
-func New(idClient uint32, svr1Addr, svr2Addr, svr3Addr string, servers []string) *Client {
+func New(idClient uint32, servers []string) *Client {
 	n := len(servers)
 	c := &Client{
-		ClientId:     idClient,
-		Svr1Addr:     svr1Addr,
-		Svr2Addr:     svr2Addr,
-		Svr3Addr:     svr3Addr,
-		servers:      make([]string, n),
-		replicasConn: make([]*exchangestore.ExchangeStore, n),
+		ClientId:          idClient,
+		servers:           make([]string, n),
+		exchangeStoreConn: make([]*exchangestore.ExchangeStore, n),
 	}
 	copy(c.servers, servers)
-	// Read servers in loop
+	// Map each Redis servers to this client
 	for i := 0; i < n; i++ {
-		log.Printf("ClientId #%v, server %v: %v", c.ClientId, i, c.servers[i])
+		log.Printf("Mapping ClientId #%v, with Redis server %v: %v", c.ClientId, i, c.servers[i])
+		// Connect to ExchangeStore Replica 1
+		eStore, err := exchangestore.New(c.servers[i])
+		if err != nil {
+			log.Panic("something happened New ExchangeStore", err)
+		}
+		c.exchangeStoreConn[i] = eStore
 	}
-
-	// Connect to ExchangeStore Replica 1
-	r1, err := exchangestore.New(svr1Addr)
-	if err != nil {
-		log.Panic("something happened New ExchangeStore", err)
-	}
-	c.replica1 = r1
-	// Connect to ExchangeStore Replica 2
-	r2, err := exchangestore.New(svr2Addr)
-	if err != nil {
-		log.Panic("something happened New ExchangeStore", err)
-	}
-	c.replica2 = r2
-
-	// Connect to ExchangeStore Replica 3
-	r3, err := exchangestore.New(svr3Addr)
-	if err != nil {
-		log.Panic("something happened New ExchangeStore", err)
-	}
-	c.replica3 = r3
 
 	return c
 }
@@ -85,46 +62,26 @@ func (c *Client) getRandomCurrencyPrice() string {
 	return valPrice
 }
 
-func (c *Client) sendOneRequest(i int) {
+func (c *Client) sendOneRequest(sn int) {
 	valPrice := c.getRandomCurrencyPrice()
 	typeOp := rand.Intn(2) // typeOp: 0 is Set, 1 is Get
-	if typeOp == 0 {
-		log.Printf("ClientId #%v, OpNum #%v: set %v", c.ClientId, i, valPrice)
-		// Writes to Replica1
-		err := c.replica1.SetExchange("usd_pen_", valPrice)
-		if err != nil {
-			log.Panicf("got error Set value opeartion #%v in ExchangeStore: %v", i, err)
-		}
-
-		// Writes to replica2
-		err = c.replica2.SetExchange("usd_pen_", valPrice)
-		if err != nil {
-			log.Panicf("got error Set value %v in ExchangeStore: %v", i, err)
-		}
-
-		// Writes to replica3
-		err = c.replica3.SetExchange("usd_pen_", valPrice)
-		if err != nil {
-			log.Panicf("got error Set value %v in ExchangeStore: %v", i, err)
+	if typeOp == 0 {       // typeOp is Set
+		log.Printf("ClientId #%v, OpNum #%v: set %v", c.ClientId, sn, valPrice)
+		// Loop redis servers (replicas) and write to each one
+		for _, exchangeStore := range c.exchangeStoreConn {
+			err := exchangeStore.SetExchange("usd_pen_", valPrice)
+			if err != nil {
+				log.Panicf("got error Set value operation #%v in ExchangeStore: %v", sn, err)
+			}
 		}
 	} else { // typeOp is Get
-		log.Printf("ClientId #%v, OpNum #%v, : get usd_pen_", c.ClientId, i)
-		// Reads from Replica1
-		_, err := c.replica1.GetExchange("usd_pen_")
-		if err != nil {
-			log.Panicf("got error Get value operation #%v in ExchangeStore: %v", i, err)
-		}
-
-		// Reads from Replica2
-		_, err = c.replica2.GetExchange("usd_pen_")
-		if err != nil {
-			log.Panicf("got error Get value operation #%v in ExchangeStore: %v", i, err)
-		}
-
-		// Reads from Replica3
-		_, err = c.replica3.GetExchange("usd_pen_")
-		if err != nil {
-			log.Panicf("got error Get value operation #%v in ExchangeStore: %v", i, err)
+		log.Printf("ClientId #%v, OpNum #%v, : get usd_pen_", c.ClientId, sn)
+		// Loop redis servers (replicas) and write to each one
+		for _, exchangeStore := range c.exchangeStoreConn {
+			_, err := exchangeStore.GetExchange("usd_pen_")
+			if err != nil {
+				log.Panicf("got error Get value operation #%v in ExchangeStore: %v", sn, err)
+			}
 		}
 	}
 }

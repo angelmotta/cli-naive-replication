@@ -13,8 +13,8 @@ func main() {
 	log.Println("*** Client test replication started ***")
 	listRedis := []string{"localhost:6380", "localhost:6381", "localhost:6382"}
 
-	c1 := client.New(0, listRedis[0], listRedis[1], listRedis[2], listRedis)
-	c2 := client.New(1, listRedis[0], listRedis[1], listRedis[2], listRedis)
+	c1 := client.New(0, listRedis)
+	c2 := client.New(1, listRedis)
 
 	// Run concurrently both clients
 	wg := new(sync.WaitGroup)

@@ -13,31 +13,41 @@ type Client struct {
 	ClientId uint32
 	Svr1Addr string
 	Svr2Addr string
+	Svr3Addr string
 	replica1 *exchangestore.ExchangeStore
 	replica2 *exchangestore.ExchangeStore
+	replica3 *exchangestore.ExchangeStore
 }
 
 var ctx = context.Background()
 
 // New returns a new client
-func New(idClient uint32, svr1Addr, svr2Addr string) *Client {
+func New(idClient uint32, svr1Addr, svr2Addr, svr3Addr string) *Client {
 	c := &Client{
 		ClientId: idClient,
 		Svr1Addr: svr1Addr,
 		Svr2Addr: svr2Addr,
+		Svr3Addr: svr3Addr,
 	}
 	// Connect to ExchangeStore Replica 1
-	r1, err := exchangestore.New("localhost:6380")
+	r1, err := exchangestore.New(svr1Addr)
 	if err != nil {
 		log.Panic("something happened New ExchangeStore", err)
 	}
 	c.replica1 = r1
 	// Connect to ExchangeStore Replica 2
-	r2, err := exchangestore.New("localhost:6381")
+	r2, err := exchangestore.New(svr2Addr)
 	if err != nil {
 		log.Panic("something happened New ExchangeStore", err)
 	}
 	c.replica2 = r2
+
+	// Connect to ExchangeStore Replica 3
+	r3, err := exchangestore.New(svr3Addr)
+	if err != nil {
+		log.Panic("something happened New ExchangeStore", err)
+	}
+	c.replica3 = r3
 
 	return c
 }
@@ -57,8 +67,15 @@ func (c *Client) CloseLoopClient(wg *sync.WaitGroup, n int) {
 			if err != nil {
 				log.Panicf("got error Set value opeartion #%v in ExchangeStore: %v", i, err)
 			}
+
 			// Writes to replica2
 			err = c.replica2.SetExchange("usd_pen_", valPrice)
+			if err != nil {
+				log.Panicf("got error Set value %v in ExchangeStore: %v", i, err)
+			}
+
+			// Writes to replica3
+			err = c.replica3.SetExchange("usd_pen_", valPrice)
 			if err != nil {
 				log.Panicf("got error Set value %v in ExchangeStore: %v", i, err)
 			}
@@ -72,6 +89,12 @@ func (c *Client) CloseLoopClient(wg *sync.WaitGroup, n int) {
 
 			// Reads from Replica2
 			_, err = c.replica2.GetExchange("usd_pen_")
+			if err != nil {
+				log.Panicf("got error Get value operation #%v in ExchangeStore: %v", i, err)
+			}
+
+			// Reads from Replica3
+			_, err = c.replica3.GetExchange("usd_pen_")
 			if err != nil {
 				log.Panicf("got error Get value operation #%v in ExchangeStore: %v", i, err)
 			}

@@ -29,7 +29,7 @@ func New(idClient uint32, servers []string) *Client {
 		// Connect to ExchangeStore Replica 1
 		eStore, err := exchangestore.New(c.servers[i])
 		if err != nil {
-			log.Panic("something happened New ExchangeStore", err)
+			log.Panic("something happened New ExchangeStore: ", err)
 		}
 		c.exchangeStoreConn[i] = eStore
 	}
@@ -37,11 +37,11 @@ func New(idClient uint32, servers []string) *Client {
 	return c
 }
 
-func (c *Client) CloseLoopClient(wg *sync.WaitGroup, n int) {
+func (c *Client) CloseLoopClient(wg *sync.WaitGroup, numReqs int) {
 	defer wg.Done() // Decrement the counter when goroutine complete
 
 	log.Printf("ClientId #%v, started CloseLoop...", c.ClientId)
-	for i := 0; i < n; i++ {
+	for i := 0; i < numReqs; i++ {
 		c.sendOneRequest(i)
 	}
 	log.Printf("ClientId #%v, finished CloseLoopClient!!", c.ClientId)

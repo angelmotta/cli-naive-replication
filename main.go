@@ -11,18 +11,23 @@ import (
 func main() {
 	//initialTestApproach();
 	log.Println("*** Client test replication started ***")
-	listRedis := []string{"localhost:6380", "localhost:6381", "localhost:6382"}
+	// Parameters configuration
+	RedisList := []string{"localhost:6380", "localhost:6381", "localhost:6382"}
+	NClients := 2
+	NReqs := 50
 
-	c1 := client.New(0, listRedis)
-	c2 := client.New(1, listRedis)
+	// Create clients
+	clients := make([]*client.Client, NClients)
+	for i := 0; i < NClients; i++ {
+		clients[i] = client.New(uint32(i), RedisList)
+	}
 
-	// Run concurrently both clients
+	// Run concurrently clients
 	wg := new(sync.WaitGroup)
-	wg.Add(1)
-	go c1.CloseLoopClient(wg, 2500)
-
-	wg.Add(1)
-	go c2.CloseLoopClient(wg, 2500)
+	for i := 0; i < NClients; i++ {
+		wg.Add(1)
+		go clients[i].CloseLoopClient(wg, NReqs)
+	}
 
 	// Wait until both clients are done
 	log.Println("waiting to finish both clients")

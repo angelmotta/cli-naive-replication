@@ -3,9 +3,11 @@ package client
 import (
 	"github.com/angelmotta/cli-naive-replication/internal/exchangestore"
 	"log"
+	"math"
 	"math/rand"
 	"strconv"
 	"sync"
+	"time"
 )
 
 type Client struct {
@@ -39,10 +41,18 @@ func New(idClient uint32, servers []string) *Client {
 
 func (c *Client) CloseLoopClient(wg *sync.WaitGroup, numReqs int) {
 	defer wg.Done() // Decrement the counter when goroutine complete
-
+	ClientTimeout := 5 * time.Second
+	NClientRequests := math.MaxInt64
+	ticker := time.NewTicker(ClientTimeout) // channel to receive timeout
 	log.Printf("ClientId #%v, started CloseLoop...", c.ClientId)
-	for i := 0; i < numReqs; i++ {
-		c.sendOneRequest(i)
+MainLoopClient:
+	for i := 0; i < NClientRequests; i++ {
+		select {
+		case <-ticker.C:
+			break MainLoopClient
+		default:
+			c.sendOneRequest(i)
+		}
 	}
 	log.Printf("ClientId #%v, finished CloseLoopClient!!", c.ClientId)
 }
@@ -62,7 +72,7 @@ func (c *Client) getRandomCurrencyPrice() string {
 	return valPrice
 }
 
-func (c *Client) sendOneRequest(sn int) {
+func (c *Client) sendOneRequest(sn int) int {
 	valPrice := c.getRandomCurrencyPrice()
 	typeOp := rand.Intn(2) // typeOp: 0 is Set, 1 is Get
 	if typeOp == 0 {       // typeOp is Set
@@ -84,4 +94,5 @@ func (c *Client) sendOneRequest(sn int) {
 			}
 		}
 	}
+	return 0
 }

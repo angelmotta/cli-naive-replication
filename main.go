@@ -19,10 +19,10 @@ func main() {
 	// Run concurrently both clients
 	wg := new(sync.WaitGroup)
 	wg.Add(1)
-	go c1.CloseLoopClient(wg, 20)
+	go c1.CloseLoopClient(wg, 2500)
 
 	wg.Add(1)
-	go c2.CloseLoopClient(wg, 20)
+	go c2.CloseLoopClient(wg, 2500)
 
 	// Wait until both clients are done
 	log.Println("waiting to finish both clients")

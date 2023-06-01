@@ -25,7 +25,7 @@ func New(idClient uint32, servers []string) *Client {
 	copy(c.servers, servers)
 	// Map each Redis servers to this client
 	for i := 0; i < n; i++ {
-		log.Printf("Mapping ClientId #%v, with Redis server %v: %v", c.ClientId, i, c.servers[i])
+		log.Printf("Mapping ClientId #%v with Redis server %v: %v", c.ClientId, i, c.servers[i])
 		// Connect to ExchangeStore Replica 1
 		eStore, err := exchangestore.New(c.servers[i])
 		if err != nil {

@@ -15,6 +15,7 @@ type Client struct {
 	servers                    []string
 	exchangeStoreConn          []*exchangestore.ExchangeStore
 	startWorkload, endWorkload time.Time
+	RequestsExecuted           int
 }
 
 // New returns a new client
@@ -40,9 +41,9 @@ func New(idClient uint32, servers []string) *Client {
 	return c
 }
 
-func (c *Client) CloseLoopClient(wg *sync.WaitGroup, numReqs int) {
+func (c *Client) CloseLoopClient(wg *sync.WaitGroup, numSecs int) {
 	defer wg.Done() // Decrement the counter when goroutine complete
-	ClientTimeout := 5 * time.Second
+	ClientTimeout := time.Duration(numSecs) * time.Second
 	NClientRequests := math.MaxInt64
 	ticker := time.NewTicker(ClientTimeout) // channel to receive timeout
 	log.Printf("ClientId #%v, started CloseLoop...", c.ClientId)
@@ -54,6 +55,7 @@ MainLoopClient:
 			break MainLoopClient
 		default:
 			c.sendOneRequest(i)
+			c.RequestsExecuted += 1
 		}
 	}
 	c.endWorkload = time.Now()
@@ -81,7 +83,7 @@ func (c *Client) sendOneRequest(sn int) int {
 	valPrice := c.getRandomCurrencyPrice()
 	typeOp := rand.Intn(2) // typeOp: 0 is Set, 1 is Get
 	if typeOp == 0 {       // typeOp is Set
-		log.Printf("ClientId #%v, OpNum #%v: set %v", c.ClientId, sn, valPrice)
+		//log.Printf("ClientId #%v, OpNum #%v: set %v", c.ClientId, sn, valPrice)
 		// Loop redis servers (replicas) and write to each one
 		for _, exchangeStore := range c.exchangeStoreConn {
 			err := exchangeStore.SetExchange("usd_pen_", valPrice)
@@ -90,7 +92,7 @@ func (c *Client) sendOneRequest(sn int) int {
 			}
 		}
 	} else { // typeOp is Get
-		log.Printf("ClientId #%v, OpNum #%v, : get usd_pen_", c.ClientId, sn)
+		//log.Printf("ClientId #%v, OpNum #%v, : get usd_pen_", c.ClientId, sn)
 		// Loop redis servers (replicas) and write to each one
 		for _, exchangeStore := range c.exchangeStoreConn {
 			_, err := exchangeStore.GetExchange("usd_pen_")

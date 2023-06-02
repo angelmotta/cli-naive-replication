@@ -5,17 +5,17 @@ import (
 	"github.com/angelmotta/cli-naive-replication/client"
 	"github.com/angelmotta/cli-naive-replication/internal/exchangestore"
 	"log"
+	"math"
 	"sync"
 	"time"
 )
 
 func main() {
-	//initialTestApproach();
 	log.Println("*** Client test replication started ***")
-	// Parameters configuration
+	// General configuration
 	RedisList := []string{"localhost:6380", "localhost:6381", "localhost:6382"}
-	NClients := 2
-	NReqs := 50
+	NClients := 6
+	DurationTest := 10 // seconds
 
 	// Create clients
 	clients := make([]*client.Client, NClients)
@@ -28,7 +28,7 @@ func main() {
 	wg := new(sync.WaitGroup)
 	for i := 0; i < NClients; i++ {
 		wg.Add(1)
-		go clients[i].CloseLoopClient(wg, NReqs)
+		go clients[i].CloseLoopClient(wg, DurationTest)
 	}
 
 	// Wait until both clients finish their workloads
@@ -36,10 +36,22 @@ func main() {
 	wg.Wait()
 	endTime := time.Now()
 
-	// Print results
 	elapsedSeconds := endTime.Sub(startTime).Seconds()
 	log.Println("*** Client test replication finished ***")
 	log.Printf("Elapsed time in Test Replication: %v seconds\n", elapsedSeconds)
+
+	// Print summary results per client
+	generalThroughtput := 0.0
+	log.Println("--- Summary results per client ---")
+	for i := 0; i < NClients; i++ {
+		log.Printf("ClientId #%v, requests executed: %v", clients[i].ClientId, clients[i].RequestsExecuted)
+		// print throughput per client
+		throughput := math.Round(float64(clients[i].RequestsExecuted) / elapsedSeconds)
+		generalThroughtput += throughput
+		log.Printf("ClientId #%v, Throughput: %v req/sec", clients[i].ClientId, throughput)
+	}
+	log.Println("--- Summary General Results ---")
+	log.Printf("General Throughput: %v req/sec", generalThroughtput)
 }
 
 // initialTestApproach was the initial old approach

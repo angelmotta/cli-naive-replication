@@ -11,9 +11,10 @@ import (
 )
 
 type Client struct {
-	ClientId          uint32
-	servers           []string
-	exchangeStoreConn []*exchangestore.ExchangeStore
+	ClientId                   uint32
+	servers                    []string
+	exchangeStoreConn          []*exchangestore.ExchangeStore
+	startWorkload, endWorkload time.Time
 }
 
 // New returns a new client
@@ -45,6 +46,7 @@ func (c *Client) CloseLoopClient(wg *sync.WaitGroup, numReqs int) {
 	NClientRequests := math.MaxInt64
 	ticker := time.NewTicker(ClientTimeout) // channel to receive timeout
 	log.Printf("ClientId #%v, started CloseLoop...", c.ClientId)
+	c.startWorkload = time.Now()
 MainLoopClient:
 	for i := 0; i < NClientRequests; i++ {
 		select {
@@ -54,7 +56,10 @@ MainLoopClient:
 			c.sendOneRequest(i)
 		}
 	}
+	c.endWorkload = time.Now()
 	log.Printf("ClientId #%v, finished CloseLoopClient!!", c.ClientId)
+	elapsedSeconds := c.endWorkload.Sub(c.startWorkload).Seconds()
+	log.Printf("ClientId #%v, ClooseLoop duration: %v seconds", c.ClientId, elapsedSeconds)
 }
 
 func (c *Client) getRandomCurrencyPrice() string {

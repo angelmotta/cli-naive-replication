@@ -6,6 +6,7 @@ import (
 	"github.com/angelmotta/cli-naive-replication/internal/exchangestore"
 	"log"
 	"sync"
+	"time"
 )
 
 func main() {
@@ -23,16 +24,22 @@ func main() {
 	}
 
 	// Run concurrently clients
+	startTime := time.Now()
 	wg := new(sync.WaitGroup)
 	for i := 0; i < NClients; i++ {
 		wg.Add(1)
 		go clients[i].CloseLoopClient(wg, NReqs)
 	}
 
-	// Wait until both clients are done
+	// Wait until both clients finish their workloads
 	log.Println("waiting to finish both clients")
 	wg.Wait()
-	log.Println("*** Client test replication started ***")
+	endTime := time.Now()
+
+	// Print results
+	elapsedSeconds := endTime.Sub(startTime).Seconds()
+	log.Println("*** Client test replication finished ***")
+	log.Printf("Elapsed time in Test Replication: %v seconds\n", elapsedSeconds)
 }
 
 // initialTestApproach was the initial old approach

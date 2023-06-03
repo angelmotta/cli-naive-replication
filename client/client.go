@@ -1,14 +1,20 @@
 package client
 
 import (
+	"github.com/angelmotta/cli-naive-replication/internal/config"
 	"github.com/angelmotta/cli-naive-replication/internal/exchangestore"
 	"log"
-	"math"
 	"math/rand"
 	"strconv"
 	"sync"
 	"time"
 )
+
+type CmdLog struct {
+	SendTime    time.Time     // the send time of this client command
+	ReceiveTime time.Time     // the receive time of client command
+	Duration    time.Duration // the calculated latency for this command (ReceiveTime - SendTime)
+}
 
 type Client struct {
 	ClientId                   uint32
@@ -16,6 +22,7 @@ type Client struct {
 	exchangeStoreConn          []*exchangestore.ExchangeStore
 	startWorkload, endWorkload time.Time
 	RequestsExecuted           int
+	CommandsLog                []CmdLog
 }
 
 // New returns a new client
@@ -25,6 +32,7 @@ func New(idClient uint32, servers []string) *Client {
 		ClientId:          idClient,
 		servers:           make([]string, n),
 		exchangeStoreConn: make([]*exchangestore.ExchangeStore, n),
+		CommandsLog:       make([]CmdLog, config.Global.NClientRequests),
 	}
 	copy(c.servers, servers)
 	// Map each Redis servers to this client
@@ -44,17 +52,19 @@ func New(idClient uint32, servers []string) *Client {
 func (c *Client) CloseLoopClient(wg *sync.WaitGroup, numSecs int) {
 	defer wg.Done() // Decrement the counter when goroutine complete
 	ClientTimeout := time.Duration(numSecs) * time.Second
-	NClientRequests := math.MaxInt64
 	ticker := time.NewTicker(ClientTimeout) // channel to receive timeout
 	log.Printf("ClientId #%v, started CloseLoop...", c.ClientId)
 	c.startWorkload = time.Now()
 MainLoopClient:
-	for i := 0; i < NClientRequests; i++ {
+	for i := 0; i < config.Global.NClientRequests; i++ {
 		select {
 		case <-ticker.C:
 			break MainLoopClient
 		default:
+			c.CommandsLog[i].SendTime = time.Now()
 			c.sendOneRequest(i)
+			c.CommandsLog[i].ReceiveTime = time.Now()
+			c.CommandsLog[i].Duration = c.CommandsLog[i].ReceiveTime.Sub(c.CommandsLog[i].SendTime)
 			c.RequestsExecuted += 1
 		}
 	}
@@ -84,7 +94,7 @@ func (c *Client) sendOneRequest(sn int) int {
 	typeOp := rand.Intn(2) // typeOp: 0 is Set, 1 is Get
 	if typeOp == 0 {       // typeOp is Set
 		//log.Printf("ClientId #%v, OpNum #%v: set %v", c.ClientId, sn, valPrice)
-		// Loop redis servers (replicas) and write to each one
+		// Loop over list of replicas (redis servers) and write data to each one
 		for _, exchangeStore := range c.exchangeStoreConn {
 			err := exchangeStore.SetExchange("usd_pen_", valPrice)
 			if err != nil {
@@ -93,7 +103,7 @@ func (c *Client) sendOneRequest(sn int) int {
 		}
 	} else { // typeOp is Get
 		//log.Printf("ClientId #%v, OpNum #%v, : get usd_pen_", c.ClientId, sn)
-		// Loop redis servers (replicas) and write to each one
+		// Loop over list of replicas (redis servers) and get data from each one
 		for _, exchangeStore := range c.exchangeStoreConn {
 			_, err := exchangeStore.GetExchange("usd_pen_")
 			if err != nil {

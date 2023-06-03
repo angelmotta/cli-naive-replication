@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/angelmotta/cli-naive-replication/client"
+	"github.com/angelmotta/cli-naive-replication/internal/config"
 	"github.com/angelmotta/cli-naive-replication/internal/exchangestore"
 	"log"
 	"math"
@@ -13,26 +14,24 @@ import (
 func main() {
 	log.Println("*** Client test replication started ***")
 	// General configuration
-	RedisList := []string{"localhost:6380", "localhost:6381", "localhost:6382"}
-	NClients := 6
-	DurationTest := 10 // seconds
+	config.Global.Init()
 
 	// Create clients
-	clients := make([]*client.Client, NClients)
-	for i := 0; i < NClients; i++ {
-		clients[i] = client.New(uint32(i), RedisList)
+	clients := make([]*client.Client, config.Global.NClients)
+	for i := 0; i < config.Global.NClients; i++ {
+		clients[i] = client.New(uint32(i), config.Global.RedisList)
 	}
 
 	// Run concurrently clients
 	startTime := time.Now()
 	wg := new(sync.WaitGroup)
-	for i := 0; i < NClients; i++ {
+	for i := 0; i < config.Global.NClients; i++ {
 		wg.Add(1)
-		go clients[i].CloseLoopClient(wg, DurationTest)
+		go clients[i].CloseLoopClient(wg, config.Global.DurationTest)
 	}
 
-	// Wait until both clients finish their workloads
-	log.Println("waiting to finish both clients")
+	// Wait until clients finish their workloads
+	log.Println("waiting until clients finish their workloads...")
 	wg.Wait()
 	endTime := time.Now()
 
@@ -41,12 +40,16 @@ func main() {
 	log.Printf("Elapsed time in Test Replication: %v seconds\n", elapsedSeconds)
 
 	// Print summary results per client
+	printSummaryResults(clients)
+}
+
+func printSummaryResults(clients []*client.Client) {
 	generalThroughtput := 0.0
 	log.Println("--- Summary results per client ---")
-	for i := 0; i < NClients; i++ {
+	for i := 0; i < config.Global.NClients; i++ {
 		log.Printf("ClientId #%v, requests executed: %v", clients[i].ClientId, clients[i].RequestsExecuted)
 		// print throughput per client
-		throughput := math.Round(float64(clients[i].RequestsExecuted) / elapsedSeconds)
+		throughput := math.Round(float64(clients[i].RequestsExecuted) / float64(config.Global.DurationTest))
 		generalThroughtput += throughput
 		log.Printf("ClientId #%v, Throughput: %v req/sec", clients[i].ClientId, throughput)
 	}

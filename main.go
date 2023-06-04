@@ -7,6 +7,7 @@ import (
 	"github.com/angelmotta/cli-naive-replication/internal/exchangestore"
 	"log"
 	"math"
+	"sort"
 	"sync"
 	"time"
 )
@@ -41,6 +42,69 @@ func main() {
 
 	// Print summary results per client
 	printSummaryResults(clients)
+	// Generate Performance metrics
+	generateLatencyMetrics(clients)
+}
+
+func generateLatencyMetrics(clients []*client.Client) {
+	log.Println("--- Performance metrics ---")
+	// Calculate the average latency per client
+	for i := 0; i < config.Global.NClients; i++ {
+		calculateLatency(clients[i])
+	}
+}
+
+func calculateLatency(c *client.Client) {
+	// Validate number of commands executed
+	var cmdsExecuted int
+	for i := 0; i < len(c.CommandsLog); i++ {
+		if c.CommandsLog[i].Duration == time.Duration(0) {
+			break
+		}
+		cmdsExecuted++
+	}
+
+	if cmdsExecuted != c.RequestsExecuted {
+		log.Panicf("something happened, cmdsExecuted: %v, RequestsExecuted: %v", cmdsExecuted, c.RequestsExecuted)
+	}
+
+	// Exclude head and tails requests (20%) from the commands log
+	lenCmdLogs := int(float64(cmdsExecuted) * 0.80)
+	cmdLogs := make([]client.CmdLog, lenCmdLogs)
+	idx := 0
+	for i := 0; i < len(c.CommandsLog); i++ {
+		if i < int(float64(cmdsExecuted)*0.10) || i >= int(float64(cmdsExecuted)*0.90) {
+			continue
+		}
+		if idx < lenCmdLogs {
+			cmdLogs[idx] = c.CommandsLog[i]
+			idx++
+		} else {
+			log.Printf("cmdLogs array is ready with filtered data, idx: %v, lenCmdLogs: %v", idx, lenCmdLogs)
+			break
+		}
+	}
+
+	// Calculate latencies
+	sort.Slice(cmdLogs, func(i, j int) bool {
+		return cmdLogs[i].Duration < cmdLogs[j].Duration
+	})
+
+	var sumLatency float64
+	for _, cmd := range cmdLogs {
+		sumLatency += float64(cmd.Duration.Milliseconds())
+	}
+
+	minLat := float64(cmdLogs[0].Duration.Milliseconds())
+	maxLat := float64(cmdLogs[len(cmdLogs)-1].Duration.Milliseconds())
+	avgLat := sumLatency / float64(len(cmdLogs))
+	p90Lat := float64(cmdLogs[int(float64(len(cmdLogs))*0.90)].Duration.Milliseconds())
+	p99Lat := float64(cmdLogs[int(float64(len(cmdLogs))*0.99)].Duration.Milliseconds())
+	log.Printf("ClientId #%v, Min Latency: %v milliseconds", c.ClientId, minLat)
+	log.Printf("ClientId #%v, Max Latency: %v milliseconds", c.ClientId, maxLat)
+	log.Printf("ClientId #%v, Avg Latency: %v milliseconds", c.ClientId, avgLat)
+	log.Printf("ClientId #%v, P90 Latency: %v milliseconds", c.ClientId, p90Lat)
+	log.Printf("ClientId #%v, P99 Latency: %v milliseconds", c.ClientId, p99Lat)
 }
 
 func printSummaryResults(clients []*client.Client) {

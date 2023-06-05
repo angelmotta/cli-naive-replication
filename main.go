@@ -36,8 +36,8 @@ func main() {
 	endTime := time.Now()
 
 	elapsedSeconds := endTime.Sub(startTime).Seconds()
-	log.Println("*** Client test replication finished ***")
-	log.Printf("Elapsed time in Test Replication: %v seconds\n", elapsedSeconds)
+	log.Println("*** Client test replication finished ***\n")
+	log.Printf("Total Elapsed time Test Replication: %v seconds\n", elapsedSeconds)
 
 	// Generate Performance metrics by client
 	generateLatencyMetrics(clients)
@@ -57,21 +57,44 @@ func generateLatencyMetrics(clients []*client.Client) {
 func printSummaryResults(clients []*client.Client) {
 	generalThroughtput := 0.0
 	mid80Throughput := 0.0
-	log.Println("--- Throughput Results ---")
-	for i := 0; i < config.Global.NClients; i++ {
+	mid80MinLat := clients[0].PerfMetrics.MinLatency
+	mid80MaxLat := clients[0].PerfMetrics.MaxLatency
+	mid80AvgLat := 0.0
+	mid80P90Lat := 0.0
+	mid80P99Lat := 0.0
+	log.Println("--- Throughput Results by Client ---")
+	for i := 0; i < len(clients); i++ {
 		// Throughput per client
+		log.Printf("--- Results ClientId #%v ---", clients[i].ClientId)
 		log.Printf("ClientId #%v, Total requests executed: %v", clients[i].ClientId, clients[i].RequestsExecuted)
 		throughput := math.Round(float64(clients[i].RequestsExecuted) / float64(config.Global.DurationTest))
 		generalThroughtput += throughput
-		// Mid 80% throughput per client
+		// Mid 80% metrics per client
 		clientMid80thr := math.Round(float64(clients[i].PerfMetrics.Mid80Reqs) / clients[i].PerfMetrics.Mid80Duration)
 		mid80Throughput += clientMid80thr
+		// Min Latency of system
+		if clients[i].PerfMetrics.MinLatency < mid80MinLat {
+			mid80MinLat = clients[i].PerfMetrics.MinLatency
+		}
+		// Max Latency of system
+		if clients[i].PerfMetrics.MaxLatency > mid80MaxLat {
+			mid80MaxLat = clients[i].PerfMetrics.MaxLatency
+		}
+		// Latencies of system
+		mid80AvgLat += clients[i].PerfMetrics.AvgLatency
+		mid80P90Lat += clients[i].PerfMetrics.P90Latency
+		mid80P99Lat += clients[i].PerfMetrics.P99Latency
 		log.Printf("ClientId #%v, Throughput: %v req/sec", clients[i].ClientId, throughput)
 		log.Printf("ClientId #%v, Mid80Throughput: %v req/sec", clients[i].ClientId, clientMid80thr)
 	}
-	log.Println("--- General Throughput Server Results ---")
+	log.Println("--- General Performance Server Results ---")
 	log.Printf("General Throughput: %v req/sec", generalThroughtput)
-	log.Printf("Mid80 Throughput: %v req/sec", mid80Throughput)
+	log.Printf("Throughput (Mid80): %v req/sec", mid80Throughput)
+	log.Printf("Min Latency (Mid80): %v ms", mid80MinLat)
+	log.Printf("Max Latency (Mid80): %v ms", mid80MaxLat)
+	log.Printf("Avg Latency (Mid80): %v ms", mid80AvgLat/float64(len(clients)))
+	log.Printf("P90 Latency (Mid80): %v ms", mid80P90Lat/float64(len(clients)))
+	log.Printf("P99 Latency (Mid80): %v ms", mid80P99Lat/float64(len(clients)))
 }
 
 // initialTestApproach was the initial old approach

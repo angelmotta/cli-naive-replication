@@ -145,6 +145,7 @@ func (c *Client) CalculateLatency() {
 	lenCmdLogs := int(float64(cmdsExecuted) * 0.80)
 	cmdLogs := make([]CmdLog, lenCmdLogs)
 	idx := 0
+	// Get middle 80% of commands log
 	for i := 0; i < len(c.CommandsLog); i++ {
 		if i < int(float64(cmdsExecuted)*0.10) || i >= int(float64(cmdsExecuted)*0.90) {
 			continue
@@ -180,9 +181,9 @@ func (c *Client) CalculateLatency() {
 	c.PerfMetrics.P90Latency = float64(cmdLogs[int(float64(len(cmdLogs))*0.90)].Duration.Milliseconds())
 	c.PerfMetrics.P99Latency = float64(cmdLogs[int(float64(len(cmdLogs))*0.99)].Duration.Milliseconds())
 
-	log.Printf("ClientId #%v, Min Latency: %v milliseconds", c.ClientId, c.PerfMetrics.MinLatency)
-	log.Printf("ClientId #%v, Max Latency: %v milliseconds", c.ClientId, c.PerfMetrics.MaxLatency)
-	log.Printf("ClientId #%v, Avg Latency: %v milliseconds", c.ClientId, c.PerfMetrics.AvgLatency)
-	log.Printf("ClientId #%v, P90 Latency: %v milliseconds", c.ClientId, c.PerfMetrics.P90Latency)
-	log.Printf("ClientId #%v, P99 Latency: %v milliseconds", c.ClientId, c.PerfMetrics.P99Latency)
+	log.Printf("ClientId #%v, Min Latency (Mid80): %v milliseconds", c.ClientId, c.PerfMetrics.MinLatency)
+	log.Printf("ClientId #%v, Max Latency (Mid80): %v milliseconds", c.ClientId, c.PerfMetrics.MaxLatency)
+	log.Printf("ClientId #%v, Avg Latency (Mid80): %v milliseconds", c.ClientId, c.PerfMetrics.AvgLatency)
+	log.Printf("ClientId #%v, P90 Latency (Mid80): %v milliseconds", c.ClientId, c.PerfMetrics.P90Latency)
+	log.Printf("ClientId #%v, P99 Latency (Mid80): %v milliseconds", c.ClientId, c.PerfMetrics.P99Latency)
 }

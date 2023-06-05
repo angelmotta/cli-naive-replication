@@ -11,7 +11,7 @@ type Config struct {
 
 func (c *Config) Init() {
 	c.NClientRequests = 10000000 // the default value
-	c.NClients = 2               // number of concurrent clients
-	c.DurationTest = 5           // seconds
-	c.RedisList = []string{"localhost:6380", "localhost:6381", "localhost:6382"}
+	c.NClients = 15              // number of concurrent clients
+	c.DurationTest = 20          // seconds
+	c.RedisList = []string{"172.31.29.50:6379", "172.31.22.226:6380", "172.31.22.56:6381"}
 }

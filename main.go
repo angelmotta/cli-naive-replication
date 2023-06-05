@@ -7,7 +7,6 @@ import (
 	"github.com/angelmotta/cli-naive-replication/internal/exchangestore"
 	"log"
 	"math"
-	"sort"
 	"sync"
 	"time"
 )
@@ -40,85 +39,39 @@ func main() {
 	log.Println("*** Client test replication finished ***")
 	log.Printf("Elapsed time in Test Replication: %v seconds\n", elapsedSeconds)
 
+	// Generate Performance metrics by client
+	generateLatencyMetrics(clients)
 	// Print summary results per client
 	printSummaryResults(clients)
-	// Generate Performance metrics
-	generateLatencyMetrics(clients)
 }
 
 func generateLatencyMetrics(clients []*client.Client) {
-	log.Println("--- Performance metrics ---")
+	log.Println("--- Performance metrics by client ---")
 	// Calculate the average latency per client
 	for i := 0; i < config.Global.NClients; i++ {
-		calculateLatency(clients[i])
+		log.Printf("** Performance metrics ClientId: %v **", i)
+		clients[i].CalculateLatency()
 	}
-}
-
-func calculateLatency(c *client.Client) {
-	// Validate number of commands executed
-	var cmdsExecuted int
-	for i := 0; i < len(c.CommandsLog); i++ {
-		if c.CommandsLog[i].Duration == time.Duration(0) {
-			break
-		}
-		cmdsExecuted++
-	}
-
-	if cmdsExecuted != c.RequestsExecuted {
-		log.Panicf("something happened, cmdsExecuted: %v, RequestsExecuted: %v", cmdsExecuted, c.RequestsExecuted)
-	}
-
-	// Exclude head and tails requests (20%) from the commands log
-	lenCmdLogs := int(float64(cmdsExecuted) * 0.80)
-	cmdLogs := make([]client.CmdLog, lenCmdLogs)
-	idx := 0
-	for i := 0; i < len(c.CommandsLog); i++ {
-		if i < int(float64(cmdsExecuted)*0.10) || i >= int(float64(cmdsExecuted)*0.90) {
-			continue
-		}
-		if idx < lenCmdLogs {
-			cmdLogs[idx] = c.CommandsLog[i]
-			idx++
-		} else {
-			log.Printf("cmdLogs array is ready with filtered data, idx: %v, lenCmdLogs: %v", idx, lenCmdLogs)
-			break
-		}
-	}
-
-	// Calculate latencies
-	sort.Slice(cmdLogs, func(i, j int) bool {
-		return cmdLogs[i].Duration < cmdLogs[j].Duration
-	})
-
-	var sumLatency float64
-	for _, cmd := range cmdLogs {
-		sumLatency += float64(cmd.Duration.Milliseconds())
-	}
-
-	minLat := float64(cmdLogs[0].Duration.Milliseconds())
-	maxLat := float64(cmdLogs[len(cmdLogs)-1].Duration.Milliseconds())
-	avgLat := sumLatency / float64(len(cmdLogs))
-	p90Lat := float64(cmdLogs[int(float64(len(cmdLogs))*0.90)].Duration.Milliseconds())
-	p99Lat := float64(cmdLogs[int(float64(len(cmdLogs))*0.99)].Duration.Milliseconds())
-	log.Printf("ClientId #%v, Min Latency: %v milliseconds", c.ClientId, minLat)
-	log.Printf("ClientId #%v, Max Latency: %v milliseconds", c.ClientId, maxLat)
-	log.Printf("ClientId #%v, Avg Latency: %v milliseconds", c.ClientId, avgLat)
-	log.Printf("ClientId #%v, P90 Latency: %v milliseconds", c.ClientId, p90Lat)
-	log.Printf("ClientId #%v, P99 Latency: %v milliseconds", c.ClientId, p99Lat)
 }
 
 func printSummaryResults(clients []*client.Client) {
 	generalThroughtput := 0.0
-	log.Println("--- Summary results per client ---")
+	mid80Throughput := 0.0
+	log.Println("--- Throughput Results ---")
 	for i := 0; i < config.Global.NClients; i++ {
-		log.Printf("ClientId #%v, requests executed: %v", clients[i].ClientId, clients[i].RequestsExecuted)
-		// print throughput per client
+		// Throughput per client
+		log.Printf("ClientId #%v, Total requests executed: %v", clients[i].ClientId, clients[i].RequestsExecuted)
 		throughput := math.Round(float64(clients[i].RequestsExecuted) / float64(config.Global.DurationTest))
 		generalThroughtput += throughput
+		// Mid 80% throughput per client
+		clientMid80thr := math.Round(float64(clients[i].PerfMetrics.Mid80Reqs) / clients[i].PerfMetrics.Mid80Duration)
+		mid80Throughput += clientMid80thr
 		log.Printf("ClientId #%v, Throughput: %v req/sec", clients[i].ClientId, throughput)
+		log.Printf("ClientId #%v, Mid80Throughput: %v req/sec", clients[i].ClientId, clientMid80thr)
 	}
-	log.Println("--- Summary General Results ---")
+	log.Println("--- General Throughput Server Results ---")
 	log.Printf("General Throughput: %v req/sec", generalThroughtput)
+	log.Printf("Mid80 Throughput: %v req/sec", mid80Throughput)
 }
 
 // initialTestApproach was the initial old approach

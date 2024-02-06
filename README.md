@@ -19,8 +19,8 @@ Se cuentan con dos escenarios de evaluación: para el escenario sin protocolo SM
 cuenta con la implementaciónn presentada en [este repositorio](https://github.com/angelmotta/cli-naive-replication)
 el cual consiste de un programa cliente el cual *intenta* mantener sincronizado el estado de las 3 nodos del servicio.
 El código fuente para el *Escenario con SMR* se encuentra en el repositorio [angelmotta/rabia](https://github.com/angelmotta/rabia/tree/test-rabia)
-el cual es un *fork* del repositorio oficial de [Rabia](https://github.com/haochenpan/rabia) el cual incluye
-algunas personalizaciones para evaluar *Rabia* en un entorno de contenedores Docker para un despliegue
+el cual es un *fork* del repositorio oficial de [Rabia](https://github.com/haochenpan/rabia) que incluye
+modificaciones para evaluar *Rabia* en un entorno de contenedores Docker para un despliegue
 más sencillo y realizar pruebas iniciales de forma más ágil.
 
 ## Evaluación de consistencia
